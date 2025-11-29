@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astrome - RF Outdoor Link Planner</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+        crossorigin=""/>
+  
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-root">
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+    <div class="container-fluid h-100 p-0">
+      <div class="row h-100 g-0 flex-nowrap">
+        <!-- Sidebar / Control Panel -->
+        <div class="col-12 col-md-4 col-lg-3 sidebar" id="sidebar">
+          <!-- Header (fixed at top) -->
+          <div class="sidebar-header border-bottom p-0">
+            <!-- <h5><i class="bi bi-broadcast"></i> RF Link Planner</h5>
+            <small>Point-to-Point Link Tool</small> -->
+            <img src="assets/images/logo.png" alt="Astrome Logo" class="logo pb-2" style="height: 60px;margin-bottom: 10px;">
+          </div>
+
+          <!-- Scrollable Content Area -->
+          <div class="sidebar-content">
+            <!-- Quick Guide -->
+            <div class="modern-card guide-card fade-in" id="guideCard">
+              <div class="card-header">
+                <span><i class="bi bi-lightbulb"></i></span>
+                <span style="flex: 1;">Quick Guide</span>
+                <button class="close-btn" onclick="hideGuide()"><i class="bi bi-x-lg"></i></button>
+              </div>
+              <div class="card-body">
+                <ul>
+                  <li><strong>Add Tower:</strong> Click on the map</li>
+                  <li><strong>Create Link:</strong> Enable Link Mode, then click two towers</li>
+                  <li><strong>View Fresnel:</strong> Click on a link</li>
+                  <li><strong>Edit/Delete:</strong> Use controls in lists</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Controls Card -->
+            <div class="modern-card">
+              <div class="card-header">
+                <span><i class="bi bi-sliders"></i></span> Controls
+              </div>
+              <div class="card-body">
+                <button class="btn-modern btn-primary-gradient w-100 mb-3"
+                        id="linkModeBtn"
+                        onclick="toggleLinkMode()">
+                  <i class="bi bi-link-45deg"></i> Create Link
+                </button>
+
+                <div class="btn-group-modern">
+                  <button class="btn-modern btn-outline-modern"
+                          id="fresnelBtn"
+                          onclick="toggleFresnelZone()">
+                    <i class="bi bi-eye"></i> Fresnel
+                  </button>
+                  <button class="btn-modern btn-danger-outline"
+                          id="clearAllBtn"
+                          onclick="confirmClearAll()">
+                    <i class="bi bi-trash3"></i> Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Towers Accordion -->
+            <div class="accordion accordion-modern" id="towersAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#towersCollapse" aria-expanded="true">
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                      <i class="bi bi-geo-alt-fill"></i> Towers <span class="badge-modern badge-count" id="towerCount">0</span>
+                    </span>
+                  </button>
+                </h2>
+                <div id="towersCollapse" class="accordion-collapse collapse show">
+                  <div class="accordion-body" id="towersList">
+                    <div class="empty-state">
+                      <div class="empty-state-icon"><i class="bi bi-geo-alt text-light"></i></div>
+                      <div class="empty-state-text">Click on the map to place towers</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Links Accordion -->
+            <div class="accordion accordion-modern" id="linksAccordion">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#linksCollapse" aria-expanded="true">
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                      <i class="bi bi-link-45deg"></i> Links <span class="badge-modern badge-count" id="linkCount">0</span>
+                    </span>
+                  </button>
+                </h2>
+                <div id="linksCollapse" class="accordion-collapse collapse show">
+                  <div class="accordion-body" id="linksList">
+                    <div class="empty-state">
+                      <div class="empty-state-icon"><i class="bi bi-link"></i></div>
+                      <div class="empty-state-text">Place at least 2 towers to create links</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Map View -->
+        <div class="col-12 col-md-8 col-lg-9 p-0 map-column">
+          <div class="map-wrapper">
+            <div id="map"></div>
+            <div class="link-mode-indicator" id="linkModeIndicator" style="display: none;">
+              <i class="bi bi-link-45deg"></i> Link Mode: Click a tower to start
+            </div>
+            <!-- Mobile Sidebar Toggle Button -->
+            <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
+              <i class="bi bi-list" id="mobileMenuIcon"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tower Edit Modal -->
+  <div class="modal fade" id="towerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-modern">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-geo-alt-fill"></i> Edit Tower</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body form-modern">
+          <div id="towerModalError" class="alert-modern mb-3" style="display: none;"></div>
+          
+          <div class="mb-4">
+            <label for="towerName" class="form-label">Tower Name</label>
+            <input type="text" class="form-control" id="towerName" placeholder="Enter tower name">
+          </div>
+          
+          <div class="mb-4">
+            <label for="towerFrequency" class="form-label">Frequency (GHz)</label>
+            <input type="number" class="form-control" id="towerFrequency" 
+                   step="0.1" min="0.1" max="100" value="5.8">
+            <div class="form-text">Towers must have matching frequencies to create links</div>
+          </div>
+          
+          <div class="mb-4">
+            <label class="form-label" style="font-size: 0.75rem; opacity: 0.7;">Quick Presets:</label>
+            <div class="preset-buttons">
+              <button type="button" class="preset-btn" onclick="setFrequencyPreset(2.4)">2.4 GHz</button>
+              <button type="button" class="preset-btn" onclick="setFrequencyPreset(5.8)">5.8 GHz</button>
+              <button type="button" class="preset-btn" onclick="setFrequencyPreset(6)">6 GHz</button>
+              <button type="button" class="preset-btn" onclick="setFrequencyPreset(11)">11 GHz</button>
+              <button type="button" class="preset-btn" onclick="setFrequencyPreset(18)">18 GHz</button>
+              <button type="button" class="preset-btn" onclick="setFrequencyPreset(24)">24 GHz</button>
+            </div>
+          </div>
+          
+          <div>
+            <label class="form-label" style="font-size: 0.75rem; opacity: 0.7;">Location (read-only)</label>
+            <div class="row">
+              <div class="col">
+                <input type="text" class="form-control form-control-sm" id="towerLat" disabled>
+                <div class="form-text">Latitude</div>
+              </div>
+              <div class="col">
+                <input type="text" class="form-control form-control-sm" id="towerLng" disabled>
+                <div class="form-text">Longitude</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-modern btn-outline-modern" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn-modern btn-primary-gradient" onclick="saveTower()"><i class="bi bi-floppy"></i> Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm modal-modern modal-danger">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> <span id="confirmTitle">Confirm</span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="confirmMessage" style="margin: 0; color: var(--text-muted);"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-modern btn-outline-modern" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn-modern" id="confirmBtn" 
+                  style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+          crossorigin=""></script>
+  
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <!-- RF Utility Functions -->
+  <script src="rf.js"></script>
+  
+  <!-- Main Application -->
+  <script src="app.js"></script>
+</body>
+</html>
+
