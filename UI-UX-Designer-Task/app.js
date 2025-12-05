@@ -3,6 +3,8 @@
  * Vanilla JavaScript implementation
  */
 
+import * as L from './assets/dist/leaflet-src.esm.js';
+
 // =========================================
 // Application State
 // =========================================
